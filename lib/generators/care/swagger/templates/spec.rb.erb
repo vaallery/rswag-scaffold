@@ -1,0 +1,91 @@
+require 'swagger_helper'
+
+RSpec.describe <%= controller_class_name %>Controller, type: :request do
+  let(:permissions) {['<%= singular_table_name %>']}
+  include_context 'set_authorization'
+  let(:model_name) {:<%= singular_table_name %>}
+  let(:belongs_params) { {organization_id: organization_id} }
+  let(:<%= singular_table_name %>) { create(:<%= singular_table_name %>, **belongs_params) }
+  let(:<%= plural_table_name %>) { create_list(:<%= singular_table_name %>, 10, **belongs_params) }
+  let(:params) { {<%= singular_table_name %>: attributes_for(:<%= singular_table_name %>, **belongs_params)} }
+  let(:invalid_params) { {<%= singular_table_name %>: attributes_for(:<%= singular_table_name %>, **belongs_params, name: nil)} }
+
+  after do |example|
+    example.metadata[:response][:examples] = { 'application/json' => json } rescue nil
+  end
+
+  path '/<%= plural_table_name %>' do
+    get 'list <%= plural_table_name %>' do
+      tags :<%= class_name %>
+      include_context "parameters", %i[Authorization organization_id base_for_index]
+      before { <%= plural_table_name %> }
+
+      response 200, 'successful' do
+        include_context "headers", [:XPagination]
+        produces "application/json"
+        schema type: :object,
+               properties: {<%= plural_table_name %>: {type: :array, items: {"$ref": "#/components/schemas/<%= class_name %>"}}},
+               required: [:<%= plural_table_name %>]
+
+        let(:page) { 3 }
+        let(:limit) { 4 }
+        run_test! { |response| expect(json[:<%= plural_table_name %>].size).to eq(2) }
+      end
+      include_examples "error_collection", %w[401 403]
+    end
+
+    post 'create <%= singular_table_name %>' do
+      tags :<%= class_name %>
+      consumes "application/json"
+      include_context "parameters", %i[Authorization organization_id]
+      parameter name: :params, in: :body, description: "Модель <%= class_name %>",
+                schema: {type: :object, properties: {<%= singular_table_name %>: {"$ref": "#/components/schemas/<%= class_name %>"}}}
+      response 201, "successful" do
+        produces "application/json"
+        schema type: :object,
+               properties: {<%= singular_table_name %>: {"$ref": "#/components/schemas/<%= class_name %>"}},
+               required: [:<%= singular_table_name %>]
+        run_test!
+      end
+      include_examples "error_collection", %w[401 403 422]
+    end
+  end
+
+  path '/<%= plural_table_name %>/{id}' do
+    let(:id) { <%= singular_table_name %>.id }
+
+    get 'show <%= singular_table_name %>' do
+      tags :<%= class_name %>
+      include_context "parameters", %i[Authorization organization_id id]
+      produces "application/json"
+      response 200, 'successful' do
+        schema type: :object, properties: {<%= singular_table_name %>: {"$ref": "#/components/schemas/<%= class_name %>"}}, required: [:<%= singular_table_name %>]
+        run_test!
+      end
+      include_examples "error_collection", %w[401 403]
+    end
+
+    patch 'update <%= singular_table_name %>' do
+      tags :<%= class_name %>
+      include_context "parameters", %i[Authorization organization_id id]
+      consumes "application/json"
+      parameter name: :params, in: :body, description: "Модель <%= class_name %>",
+                schema: {type: :object, properties: {<%= singular_table_name %>: {"$ref": "#/components/schemas/<%= class_name %>"}}}
+      response 200, 'successful' do
+        produces "application/json"
+        schema type: :object, properties: {<%= singular_table_name %>: {"$ref": "#/components/schemas/<%= class_name %>"}}, required: [:<%= singular_table_name %>]
+        run_test!
+      end
+      include_examples "error_collection", %w[400 401 403 422]
+    end
+
+    delete('delete <%= singular_table_name %>') do
+      tags :<%= class_name %>
+      include_context "parameters", %i[Authorization organization_id id]
+      response(204, 'successful') do
+        run_test!
+      end
+      include_examples "error_collection", %w[401 403]
+    end
+  end
+end

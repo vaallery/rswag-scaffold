@@ -1,0 +1,51 @@
+<% if namespaced? -%>
+require_dependency "<%= namespaced_path %>/application_controller"
+
+<% end -%>
+<% module_namespacing do -%>
+class <%= controller_class_name %>Controller < ApplicationController
+  load_and_authorize_resource
+  set_pagination_headers :<%= plural_table_name %>, only: [:index]
+  before_action :set_<%= singular_table_name %>, only: [:show, :update, :destroy]
+
+  # GET <%= route_url %>
+  def index
+    @<%= plural_table_name %> = <%= controller_class_name %>Finder.call(@<%= plural_table_name %>, filter_params)
+
+    render json: <%= "@#{plural_table_name}" %>
+  end
+
+  # GET <%= route_url %>/1
+  def show
+    render json: <%= "@#{singular_table_name}" %>
+  end
+
+  # POST <%= route_url %>
+  def create
+    render json: <%= class_name %>.create!(<%= "#{singular_table_name}_params" %>), status: :created
+  end
+
+  # PATCH/PUT <%= route_url %>/1
+  def update
+    <%= "@#{singular_table_name}" %>.update!(<%= "#{singular_table_name}_params" %>)
+    render json: <%= "@#{singular_table_name}" %>, status: :ok
+  end
+
+  # DELETE <%= route_url %>/1
+  def destroy
+    <%= "@#{singular_table_name}" %>.destroy!
+    head :no_content
+  end
+
+  private
+    # Use callbacks to share common setup or constraints between actions.
+    def set_<%= singular_table_name %>
+      @<%= singular_table_name %> = <%= orm_class.find(class_name, "params[:id]") %>
+    end
+
+    # Only allow a trusted parameter "white list" through.
+    def <%= "#{singular_table_name}_params" %>
+      params.require(:<%= singular_table_name %>).permit(<%= permitted_params %>)
+    end
+end
+<% end -%>

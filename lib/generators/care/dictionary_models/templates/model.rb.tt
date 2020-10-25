@@ -1,0 +1,2 @@
+class Dictionary::<%= class_name %> < ApplicationRecord
+end
